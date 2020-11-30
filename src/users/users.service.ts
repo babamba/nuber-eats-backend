@@ -7,14 +7,18 @@ import {
 } from './dto/create-account.dto';
 import { LoginInput } from './dto/login.dto';
 import { User } from './entities/user.entity';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
-import { EditProfileInput } from './dto/edit-profile.dto';
+import { EditProfileInput, EditProfileOutput } from './dto/edit-profile.dto';
+import { Verification } from './entities/verification.entity';
+import { VerifyEmailOutput } from './dto/verify-email.dto';
+import { UserProfileOutput } from './dto/user-profile.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Verification)
+    private readonly verfications: Repository<Verification>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -31,7 +35,14 @@ export class UsersService {
         // make error
         return { ok: false, error: 'There is a user with that email already' };
       }
-      await this.users.save(this.users.create({ email, password, role }));
+      const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+      await this.verfications.save(
+        this.verfications.create({
+          user,
+        }),
+      );
       return { ok: true };
     } catch (error) {
       console.log('error : ', error);
@@ -44,7 +55,10 @@ export class UsersService {
     password,
   }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
     try {
-      const user = await this.users.findOne({ email });
+      const user = await this.users.findOne(
+        { email },
+        { select: ['id', 'password'] },
+      );
       if (!user) {
         return {
           ok: false,
@@ -58,6 +72,7 @@ export class UsersService {
           error: 'Wrong password',
         };
       }
+      //console.log('user : ', user);
       //const token = jwt.sign({ id: user.id }, this.config.get('PRIVATE_KEY'));
       const token = this.jwtService.sign(user.id);
       return {
@@ -72,8 +87,21 @@ export class UsersService {
     }
   }
 
-  async findById(id: number): Promise<User> {
-    return this.users.findOne({ id });
+  async findById(id: number): Promise<UserProfileOutput> {
+    try {
+      const user = await this.users.findOne({ id });
+      if (user) {
+        return {
+          ok: true,
+          user: user,
+        };
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'User Not Found',
+      };
+    }
   }
 
   // 로그인 된 상태가 아니라면 header에서 토큰값을 기반으로한 id를 줄수없으니
@@ -90,15 +118,58 @@ export class UsersService {
   async editProfile(
     userId: number,
     { email, password }: EditProfileInput,
-  ): Promise<User> {
+  ): Promise<EditProfileOutput> {
     // return this.users.update(userId, { ...editProfileInput });
-    const user = await this.users.findOne(userId);
-    if (email) {
-      user.email = email;
+    try {
+      const user = await this.users.findOne(userId);
+      if (email) {
+        user.email = email;
+        user.verified = false;
+        await this.verfications.save(this.verfications.create({ user }));
+      }
+      if (password) {
+        user.password = password;
+      }
+      await this.users.save(user);
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Could not update profile.',
+      };
     }
-    if (password) {
-      user.password = password;
+
+    //return this.users.save(user);
+  }
+
+  async verifyEmail(code: string): Promise<VerifyEmailOutput> {
+    try {
+      const verification = await this.verfications.findOne(
+        { code },
+        // TypeOrm 에서 ralation Ship을 다룰때 해당 옵션을 통해 관계구조를 사용할 수 있다
+        // { loadRelationIds: true }, // relation ship 관계일때 id 속성만 필요 할 때
+        { relations: ['user'] }, // relation ship 관계일때 연결된 데이터가 필요 할 때
+      );
+      if (verification) {
+        verification.user.verified = true;
+        await this.users.save(verification.user);
+        await this.verfications.delete(verification.id);
+        return {
+          ok: true,
+        };
+      }
+      return {
+        ok: false,
+        error: 'Verification not found',
+      };
+    } catch (error) {
+      console.log('error : ', error);
+      return {
+        ok: false,
+        error,
+      };
     }
-    return this.users.save(user);
   }
 }
