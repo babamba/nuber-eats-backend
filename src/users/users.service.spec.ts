@@ -3,9 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from 'src/jwt/jwt.service';
 import { MailService } from 'src/mail/mail.service';
 import { Repository } from 'typeorm';
-import { UsersService } from '../users.service';
-import { User } from './user.entity';
-import { Verification } from './verification.entity';
+import { UsersService } from './users.service';
+import { User } from './entities/user.entity';
+import { Verification } from './entities/verification.entity';
 
 // 가짜 함수
 const mockRepository = () => ({
