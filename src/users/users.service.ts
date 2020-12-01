@@ -29,10 +29,9 @@ export class UsersService {
     password,
     role,
   }: CreateAccountInput): Promise<CreateAccountOutput> {
-    // check new user
-    // create user & hash the password
     try {
       const exists = await this.users.findOne({ email });
+
       if (exists) {
         // make error
         return { ok: false, error: 'There is a user with that email already' };
@@ -48,7 +47,7 @@ export class UsersService {
       this.mailService.sendVerificationEmail(user.email, verification.code);
       return { ok: true };
     } catch (error) {
-      console.log('error : ', error);
+      // console.log('error : ', error);
       return { ok: false, error: "Couldn't create account" };
     }
   }
@@ -85,20 +84,18 @@ export class UsersService {
     } catch (error) {
       return {
         ok: false,
-        error,
+        error: "Can't log user in",
       };
     }
   }
 
   async findById(id: number): Promise<UserProfileOutput> {
     try {
-      const user = await this.users.findOne({ id });
-      if (user) {
-        return {
-          ok: true,
-          user: user,
-        };
-      }
+      const user = await this.users.findOneOrFail({ id });
+      return {
+        ok: true,
+        user,
+      };
     } catch (error) {
       return {
         ok: false,
@@ -171,10 +168,10 @@ export class UsersService {
         error: 'Verification not found',
       };
     } catch (error) {
-      console.log('error : ', error);
+      // console.log('error : ', error);
       return {
         ok: false,
-        error,
+        error: 'Could not verify Email.',
       };
     }
   }
