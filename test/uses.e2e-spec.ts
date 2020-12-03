@@ -12,8 +12,14 @@ jest.mock('got', () => {
 
 const GRAPHQL_ENDPOINT = '/graphql';
 
+const testUser = {
+  email: 'babamba@test.com',
+  password: '1234',
+};
+
 describe('UserModule (e2e)', () => {
   let app: INestApplication;
+  let jwtToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,16 +36,14 @@ describe('UserModule (e2e)', () => {
   });
 
   describe('createAccount', () => {
-    const EMAIL = 'babamba@test.com';
-
     it('should create account', () => {
       return request(app.getHttpServer())
         .post(GRAPHQL_ENDPOINT)
         .send({
           query: `mutation {
             createAccount(input:{
-              email:"${EMAIL}",
-              password:"1234",
+              email:"${testUser.email}",
+              password:"${testUser.password}",
               role:Owner
             }) {
               ok
@@ -49,8 +53,13 @@ describe('UserModule (e2e)', () => {
         })
         .expect(200)
         .expect(res => {
-          expect(res.body.data.createAccount.ok).toBe(true);
-          expect(res.body.data.createAccount.error).toBe(null);
+          const {
+            body: {
+              data: { createAccount },
+            },
+          } = res;
+          expect(createAccount.ok).toBe(true);
+          expect(createAccount.error).toBe(null);
         });
     });
 
@@ -60,7 +69,7 @@ describe('UserModule (e2e)', () => {
         .send({
           query: `mutation {
             createAccount(input:{
-              email:"${EMAIL}",
+              email:"${testUser.email}",
               password:"1234",
               role:Owner
             }) {
@@ -71,16 +80,79 @@ describe('UserModule (e2e)', () => {
         })
         .expect(200)
         .expect(res => {
-          expect(res.body.data.createAccount.ok).toBe(false);
-          expect(res.body.data.createAccount.error).toEqual(expect.any(String));
+          const {
+            body: {
+              data: { createAccount },
+            },
+          } = res;
+          expect(createAccount.ok).toBe(false);
+          expect(createAccount.error).toEqual(expect.any(String));
           // ToBe는 내용까지 동일해야 패스.
           // expect(res.body.data.createAccount.error).toBe('There is a user with that email already');
         });
     });
   });
 
+  describe('login', () => {
+    it('should login with correct credentials', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+              login(input:{
+                email:"${testUser.email}",
+                password:"${testUser.password}",
+              }) {
+                ok
+                error
+                token
+              }
+            }`,
+        })
+        .expect(200)
+        .expect(res => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          expect(login.ok).toBe(true);
+          expect(login.error).toBe(null);
+          expect(login.token).toEqual(expect.any(String));
+        });
+    });
+
+    it('should not be able to login with wrong credentials', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `mutation {
+              login(input:{
+                email:"${testUser.email}",
+                password:"xxxx",
+              }) {
+                ok
+                error
+                token
+              }
+            }`,
+        })
+        .expect(200)
+        .expect(res => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          expect(login.ok).toBe(false);
+          expect(login.error).toBe('Wrong password');
+          expect(login.token).toBe(null);
+          jwtToken = login.token;
+        });
+    });
+  });
+
   it.todo('userProfile');
-  it.todo('login');
   it.todo('me');
   it.todo('verifyEmail');
   it.todo('editProfile');
