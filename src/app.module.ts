@@ -16,6 +16,9 @@ import { JwtMiddleWare } from './jwt/jwt.middleware';
 import { AuthModule } from './auth/auth.module';
 import { Verification } from './users/entities/verification.entity';
 import { MailModule } from './mail/mail.module';
+import { Restaurant } from './restaurants/entities/restaurants.entity';
+import { Category } from './restaurants/entities/category.entity';
+import { RestaurantsModule } from './restaurants/restaurants.module';
 
 @Module({
   imports: [
@@ -48,7 +51,7 @@ import { MailModule } from './mail/mail.module';
       synchronize: process.env.NODE_ENV !== 'prod',
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
-      entities: [User, Verification], //요런식으로 테이블 엔티티를 지정해줄수도있음.
+      entities: [User, Verification, Restaurant, Category], //요런식으로 테이블 엔티티를 지정해줄수도있음.
     }),
     GraphQLModule.forRoot({
       autoSchemaFile: true,
@@ -59,9 +62,10 @@ import { MailModule } from './mail/mail.module';
       context: ({ req }) => ({ user: req['user'] }),
       // 이렇게 context를 작성하게되면 request에 user라는 프로퍼티가 존재하게 된다.
     }),
-    // RestaurantsModule,
+    RestaurantsModule,
     UsersModule,
     CommonModule,
+
     JwtModule.forRoot({
       privateKey: process.env.PRIVATE_KEY,
     }),
