@@ -1,8 +1,18 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
+import {
+  Resolver,
+  Args,
+  Mutation,
+  Query,
+  ResolveField,
+  Int,
+  Parent,
+} from '@nestjs/graphql';
 import { AuthUser } from 'src/auth/auth-user.decorator';
 import { Role } from 'src/auth/role.decorator';
 import { EditProfileOutput } from 'src/users/dto/edit-profile.dto';
 import { User } from 'src/users/entities/user.entity';
+import { AllCategoriesOutput } from './dto/all-categories.dto';
+import { CategoryInput, CategoryOutput } from './dto/category.dto';
 import {
   CreateRestaurantInput,
   CreateRestaurantOutput,
@@ -15,6 +25,13 @@ import {
   EditRestaurantInput,
   EditRestaurantOutput,
 } from './dto/edit-restaurant.dto';
+import { RestaurantInput, RestaurantOutput } from './dto/restaurant.dto';
+import { RestaurantsInput, RestaurantsOutput } from './dto/restaurants.dto';
+import {
+  SearchRestaurantInput,
+  SearchRestaurantOutput,
+} from './dto/search-restaurant.dto';
+import { Category } from './entities/category.entity';
 import { Restaurant } from './entities/restaurants.entity';
 import { RestaurantsService } from './restaurants.service';
 
@@ -54,5 +71,48 @@ export class RestaurantsResolver {
       owner,
       deleteRestaurantInput,
     );
+  }
+}
+
+@Resolver(of => Category)
+export class CategoryResolver {
+  constructor(private readonly restaurantService: RestaurantsService) {}
+
+  @ResolveField(type => Int) // Computed Field 임의의 필드를 계산해서 표현
+  restaurantCount(@Parent() category: Category): Promise<number> {
+    return this.restaurantService.countRestaurants(category);
+  }
+
+  @Query(type => AllCategoriesOutput)
+  allCategories(): Promise<AllCategoriesOutput> {
+    return this.restaurantService.allCategories();
+  }
+
+  @Query(type => CategoryOutput)
+  category(
+    @Args('input') categoryInput: CategoryInput,
+  ): Promise<CategoryOutput> {
+    return this.restaurantService.findCategoryBySlug(categoryInput);
+  }
+
+  @Query(returns => RestaurantsOutput)
+  restaurants(
+    @Args('input') restaurantsInput: RestaurantsInput,
+  ): Promise<RestaurantsOutput> {
+    return this.restaurantService.allRestaurants(restaurantsInput);
+  }
+
+  @Query(returns => RestaurantOutput)
+  restaurant(
+    @Args('input') restaurantInput: RestaurantInput,
+  ): Promise<RestaurantOutput> {
+    return this.restaurantService.findRestaurantById(restaurantInput);
+  }
+
+  @Query(returns => SearchRestaurantOutput)
+  searchRestaurant(
+    @Args('input') searchRestaurantInput: SearchRestaurantInput,
+  ): Promise<SearchRestaurantOutput> {
+    return this.restaurantService.searchRestaurantByName(searchRestaurantInput);
   }
 }
