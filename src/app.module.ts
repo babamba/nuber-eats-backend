@@ -19,6 +19,7 @@ import { MailModule } from './mail/mail.module';
 import { Restaurant } from './restaurants/entities/restaurants.entity';
 import { Category } from './restaurants/entities/category.entity';
 import { RestaurantsModule } from './restaurants/restaurants.module';
+import { Dish } from './restaurants/entities/dish.entity';
 
 @Module({
   imports: [
@@ -51,7 +52,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
       synchronize: process.env.NODE_ENV !== 'prod',
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
-      entities: [User, Verification, Restaurant, Category], //요런식으로 테이블 엔티티를 지정해줄수도있음.
+      entities: [User, Verification, Restaurant, Category, Dish], //요런식으로 테이블 엔티티를 지정해줄수도있음.
     }),
     GraphQLModule.forRoot({
       autoSchemaFile: true,
